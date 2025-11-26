@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 0.10.0"
+  required_version = ">= 1.10.0"
 
   required_providers {
     aws = {
@@ -17,22 +17,25 @@ provider "aws" {
     tags = {
       Project   = var.project_name
       Terraform = "true"
+      Layer     = "foundation"
     }
   }
 }
 
+# VPC Module
 module "vpc" {
   source = "./vpc"
 
   vpc_name             = "${var.project_name}-vpc"
   vpc_cidr             = var.vpc_cidr
-  azs                  = ["${var.aws_region}a", "${var.aws_region}b", "${var.aws_region}c"]
   private_subnet_cidrs = var.private_subnet_cidrs
   public_subnet_cidrs  = var.public_subnet_cidrs
 
+  aws_region   = var.aws_region
   cluster_name = var.cluster_name
 }
 
+# Internal EKS Cluster Module
 module "eks" {
   source = "./eks"
 
@@ -47,3 +50,23 @@ module "eks" {
   desired_size       = var.desired_size
 }
 
+# IAM Module (IRSA Roles)
+module "iam" {
+  source = "./iam"
+
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider     = replace(module.eks.oidc_provider_arn, "/^.*oidc-provider\\//", "")
+  cluster_name      = var.cluster_name
+  project_name      = var.project_name
+  aws_region        = var.aws_region
+}
+
+# ECR Module
+module "ecr" {
+  source = "./ecr"
+
+  repository_name      = var.ecr_repository_name
+  image_tag_mutability = var.ecr_image_tag_mutability
+  scan_on_push         = var.ecr_scan_on_push
+  max_image_count      = var.ecr_max_image_count
+}
