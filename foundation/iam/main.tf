@@ -15,7 +15,7 @@ data "aws_iam_policy_document" "alb_controller_assume_role" {
     condition {
       test     = "StringEquals"
       variable = "${var.oidc_provider}:sub"
-      values   = ["system:serviceaccount:kube-system:aws-load-balancer-controller"]
+      values   = ["system:serviceaccount:kube-system:alb-controller-sa"]
     }
 
     condition {
@@ -86,7 +86,29 @@ resource "aws_iam_role" "jenkins_agent" {
 resource "aws_iam_policy" "jenkins_ecr" {
   name        = "${var.project_name}-jenkins-ecr-policy"
   description = "Allows Jenkins agents to push images to ECR"
-  policy      = file("${path.module}/policies/jenkins-ecr-push.json")
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["ecr:GetAuthorizationToken"]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:PutImage",
+          "ecr:InitiateLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload"
+        ]
+        Resource = var.ecr_repository_arn
+      }
+    ]
+  })
 }
 
 resource "aws_iam_role_policy_attachment" "jenkins_agent" {
@@ -136,7 +158,20 @@ resource "aws_iam_role" "argocd" {
 resource "aws_iam_policy" "argocd_secrets" {
   name        = "${var.project_name}-argocd-secrets-policy"
   description = "Allows ArgoCD to read secrets from Secrets Manager"
-  policy      = file("${path.module}/policies/argocd-secrets-manager.json")
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+        Resource = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:argocd/*"
+      }
+      # Note: Cross-cluster AssumeRole will be added in Phase 4 when production cluster is created
+    ]
+  })
 }
 
 resource "aws_iam_role_policy_attachment" "argocd" {

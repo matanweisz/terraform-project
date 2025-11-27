@@ -22,3 +22,8 @@ variable "aws_region" {
   description = "AWS region for policy ARNs"
   type        = string
 }
+
+variable "ecr_repository_arn" {
+  description = "ARN of the ECR repository for Jenkins agent permissions"
+  type        = string
+}

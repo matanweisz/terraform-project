@@ -54,11 +54,12 @@ module "eks" {
 module "iam" {
   source = "./iam"
 
-  oidc_provider_arn = module.eks.oidc_provider_arn
-  oidc_provider     = replace(module.eks.oidc_provider_arn, "/^.*oidc-provider\\//", "")
-  cluster_name      = var.cluster_name
-  project_name      = var.project_name
-  aws_region        = var.aws_region
+  oidc_provider_arn  = module.eks.oidc_provider_arn
+  oidc_provider      = replace(module.eks.oidc_provider_arn, "/^.*oidc-provider\\//", "")
+  cluster_name       = var.cluster_name
+  project_name       = var.project_name
+  aws_region         = var.aws_region
+  ecr_repository_arn = module.ecr.repository_arn
 }
 
 # ECR Module
