@@ -48,6 +48,7 @@ resource "aws_iam_role_policy_attachment" "alb_controller" {
   policy_arn = aws_iam_policy.alb_controller.arn
 }
 
+
 # Jenkins Agent IAM Role (ECR Push)
 data "aws_iam_policy_document" "jenkins_agent_assume_role" {
   statement {
@@ -116,7 +117,8 @@ resource "aws_iam_role_policy_attachment" "jenkins_agent" {
   policy_arn = aws_iam_policy.jenkins_ecr.arn
 }
 
-# ArgoCD IAM Role (Secrets Manager)
+
+# ArgoCD IAM Role (for ArgoCD to read from the Secrets Manager)
 data "aws_iam_policy_document" "argocd_assume_role" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -179,10 +181,8 @@ resource "aws_iam_role_policy_attachment" "argocd" {
   policy_arn = aws_iam_policy.argocd_secrets.arn
 }
 
-# ========================================
-# External Secrets Operator IAM Role
-# ========================================
 
+# External Secrets Operator IAM Role (reads the secrets from AWS Secrets Manager)
 data "aws_iam_policy_document" "external_secrets_assume_role" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -250,4 +250,39 @@ resource "aws_iam_policy" "external_secrets" {
 resource "aws_iam_role_policy_attachment" "external_secrets" {
   role       = aws_iam_role.external_secrets.name
   policy_arn = aws_iam_policy.external_secrets.arn
+}
+
+
+# EBS CSI Driver IAM Role
+data "aws_iam_policy_document" "ebs_csi_driver_assume_role" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [var.oidc_provider_arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${var.oidc_provider}:sub"
+      values   = ["system:serviceaccount:kube-system:ebs-csi-controller-sa"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${var.oidc_provider}:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "ebs_csi_driver" {
+  name               = "${var.project_name}-ebs-csi-driver"
+  assume_role_policy = data.aws_iam_policy_document.ebs_csi_driver_assume_role.json
+}
+
+resource "aws_iam_role_policy_attachment" "ebs_csi_driver" {
+  role       = aws_iam_role.ebs_csi_driver.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
 }
