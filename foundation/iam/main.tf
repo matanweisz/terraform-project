@@ -178,3 +178,76 @@ resource "aws_iam_role_policy_attachment" "argocd" {
   role       = aws_iam_role.argocd.name
   policy_arn = aws_iam_policy.argocd_secrets.arn
 }
+
+# ========================================
+# External Secrets Operator IAM Role
+# ========================================
+
+data "aws_iam_policy_document" "external_secrets_assume_role" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [var.oidc_provider_arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${var.oidc_provider}:sub"
+      values = [
+        "system:serviceaccount:external-secrets:external-secrets",
+        "system:serviceaccount:external-secrets:external-secrets-webhook",
+        "system:serviceaccount:external-secrets:external-secrets-cert-controller"
+      ]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${var.oidc_provider}:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "external_secrets" {
+  name               = "${var.project_name}-external-secrets"
+  assume_role_policy = data.aws_iam_policy_document.external_secrets_assume_role.json
+
+  tags = {
+    Name      = "${var.project_name}-external-secrets"
+    Cluster   = var.cluster_name
+    ManagedBy = "terraform"
+  }
+}
+
+resource "aws_iam_policy" "external_secrets" {
+  name        = "${var.project_name}-external-secrets-policy"
+  description = "Allows External Secrets Operator to read secrets from Secrets Manager"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "ReadInternalClusterSecrets"
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+        Resource = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:/internal-cluster/*"
+      },
+      {
+        Sid      = "ListSecretsForDebugging"
+        Effect   = "Allow"
+        Action   = ["secretsmanager:ListSecrets"]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "external_secrets" {
+  role       = aws_iam_role.external_secrets.name
+  policy_arn = aws_iam_policy.external_secrets.arn
+}

@@ -55,7 +55,7 @@ module "iam" {
   source = "./iam"
 
   oidc_provider_arn  = module.eks.oidc_provider_arn
-  oidc_provider      = replace(module.eks.oidc_provider_arn, "/^.*oidc-provider\\//", "")
+  oidc_provider      = module.eks.oidc_provider
   cluster_name       = var.cluster_name
   project_name       = var.project_name
   aws_region         = var.aws_region
@@ -70,4 +70,11 @@ module "ecr" {
   image_tag_mutability = var.ecr_image_tag_mutability
   scan_on_push         = var.ecr_scan_on_push
   max_image_count      = var.ecr_max_image_count
+}
+
+# Secrets Manager Module
+module "secret_manager" {
+  source = "./secret-manager"
+
+  cluster_name = var.cluster_name
 }

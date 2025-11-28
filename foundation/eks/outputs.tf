@@ -14,6 +14,11 @@ output "oidc_provider_arn" {
   value = module.eks.oidc_provider_arn
 }
 
+output "oidc_provider" {
+  description = "OIDC provider URL (without https:// prefix) for IAM trust policies"
+  value       = module.eks.oidc_provider
+}
+
 output "node_security_group_id" {
   value = module.eks.node_security_group_id
 }

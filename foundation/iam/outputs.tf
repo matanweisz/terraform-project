@@ -27,3 +27,13 @@ output "argocd_role_name" {
   description = "Name of ArgoCD IAM role"
   value       = aws_iam_role.argocd.name
 }
+
+output "external_secrets_role_arn" {
+  description = "ARN of External Secrets Operator IAM role (annotate ServiceAccount: eks.amazonaws.com/role-arn)"
+  value       = aws_iam_role.external_secrets.arn
+}
+
+output "external_secrets_role_name" {
+  description = "Name of External Secrets Operator IAM role"
+  value       = aws_iam_role.external_secrets.name
+}

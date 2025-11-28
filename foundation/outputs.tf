@@ -64,6 +64,11 @@ output "argocd_role_arn" {
   value       = module.iam.argocd_role_arn
 }
 
+output "external_secrets_role_arn" {
+  description = "ARN of External Secrets Operator IAM role (annotate ServiceAccount with this)"
+  value       = module.iam.external_secrets_role_arn
+}
+
 # ECR Outputs
 output "ecr_repository_url" {
   description = "ECR repository URL for weather-app container images (use in Jenkins pipeline)"
@@ -80,13 +85,32 @@ output "ecr_repository_name" {
   value       = module.ecr.repository_name
 }
 
+# ========================================
+# Secrets Manager Outputs
+# ========================================
+
+output "secret_names" {
+  description = "List of all secret names created in AWS Secrets Manager"
+  value       = module.secret_manager.secret_names
+}
+
+output "manual_injection_commands" {
+  description = "AWS CLI commands to manually inject secret values into AWS Secrets Manager"
+  value       = module.secret_manager.manual_injection_commands
+  sensitive   = false # Not sensitive - these are just placeholder commands
+}
+
+# ========================================
 # Summary Output of all created resources
+# ========================================
+
 output "foundation_summary" {
   description = "Summary of foundation resources created"
   value = {
-    vpc_id           = module.vpc.vpc_id
-    cluster_name     = module.eks.cluster_id
-    cluster_endpoint = module.eks.cluster_endpoint
-    ecr_repository   = module.ecr.repository_url
+    vpc_id                    = module.vpc.vpc_id
+    cluster_name              = module.eks.cluster_id
+    cluster_endpoint          = module.eks.cluster_endpoint
+    ecr_repository            = module.ecr.repository_url
+    external_secrets_role_arn = module.iam.external_secrets_role_arn
   }
 }
