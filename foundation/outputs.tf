@@ -90,10 +90,7 @@ output "ecr_repository_name" {
   value       = module.ecr.repository_name
 }
 
-# ========================================
 # Secrets Manager Outputs
-# ========================================
-
 output "secret_names" {
   description = "List of all secret names created in AWS Secrets Manager"
   value       = module.secret_manager.secret_names
@@ -105,10 +102,7 @@ output "manual_injection_commands" {
   sensitive   = false # Not sensitive - these are just placeholder commands
 }
 
-# ========================================
 # Summary Output of all created resources
-# ========================================
-
 output "foundation_summary" {
   description = "Summary of foundation resources created"
   value = {
