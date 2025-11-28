@@ -69,6 +69,11 @@ output "external_secrets_role_arn" {
   value       = module.iam.external_secrets_role_arn
 }
 
+output "ebs_csi_driver_role_arn" {
+  description = "ARN of EBS CSI Driver IAM role (annotate ServiceAccount with this)"
+  value       = module.iam.ebs_csi_driver_role_arn
+}
+
 # ECR Outputs
 output "ecr_repository_url" {
   description = "ECR repository URL for weather-app container images (use in Jenkins pipeline)"
