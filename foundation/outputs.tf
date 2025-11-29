@@ -54,9 +54,9 @@ output "alb_controller_role_arn" {
   value       = module.iam.alb_controller_role_arn
 }
 
-output "jenkins_agent_role_arn" {
-  description = "ARN of Jenkins agent IAM role for ECR push (annotate ServiceAccount with this)"
-  value       = module.iam.jenkins_agent_role_arn
+output "jenkins_ecr_role_arn" {
+  description = "ARN of Jenkins IAM role for ECR push (annotate ServiceAccount with this)"
+  value       = module.iam.jenkins_ecr_role_arn
 }
 
 output "argocd_role_arn" {

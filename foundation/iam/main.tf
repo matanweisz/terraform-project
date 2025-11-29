@@ -49,8 +49,9 @@ resource "aws_iam_role_policy_attachment" "alb_controller" {
 }
 
 
-# Jenkins Agent IAM Role (ECR Push)
-data "aws_iam_policy_document" "jenkins_agent_assume_role" {
+# Jenkins IAM Role (ECR Push)
+# This role is used by both the Jenkins controller and dynamic agent pods
+data "aws_iam_policy_document" "jenkins_ecr_assume_role" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
 
@@ -62,7 +63,11 @@ data "aws_iam_policy_document" "jenkins_agent_assume_role" {
     condition {
       test     = "StringEquals"
       variable = "${var.oidc_provider}:sub"
-      values   = ["system:serviceaccount:jenkins:jenkins-agent"]
+      # Allow both jenkins service account and dynamically created agent pods
+      values   = [
+        "system:serviceaccount:jenkins:jenkins",
+        "system:serviceaccount:jenkins:default"
+      ]
     }
 
     condition {
@@ -73,12 +78,12 @@ data "aws_iam_policy_document" "jenkins_agent_assume_role" {
   }
 }
 
-resource "aws_iam_role" "jenkins_agent" {
-  name               = "${var.project_name}-jenkins-agent"
-  assume_role_policy = data.aws_iam_policy_document.jenkins_agent_assume_role.json
+resource "aws_iam_role" "jenkins_ecr" {
+  name               = "${var.project_name}-jenkins-ecr"
+  assume_role_policy = data.aws_iam_policy_document.jenkins_ecr_assume_role.json
 
   tags = {
-    Name      = "${var.project_name}-jenkins-agent"
+    Name      = "${var.project_name}-jenkins-ecr"
     Cluster   = var.cluster_name
     ManagedBy = "terraform"
   }
@@ -112,8 +117,8 @@ resource "aws_iam_policy" "jenkins_ecr" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "jenkins_agent" {
-  role       = aws_iam_role.jenkins_agent.name
+resource "aws_iam_role_policy_attachment" "jenkins_ecr" {
+  role       = aws_iam_role.jenkins_ecr.name
   policy_arn = aws_iam_policy.jenkins_ecr.arn
 }
 

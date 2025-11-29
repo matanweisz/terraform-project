@@ -8,14 +8,14 @@ output "alb_controller_role_name" {
   value       = aws_iam_role.alb_controller.name
 }
 
-output "jenkins_agent_role_arn" {
-  description = "ARN of Jenkins agent IAM role for ECR push (annotate ServiceAccount: eks.amazonaws.com/role-arn)"
-  value       = aws_iam_role.jenkins_agent.arn
+output "jenkins_ecr_role_arn" {
+  description = "ARN of Jenkins IAM role for ECR push (annotate ServiceAccount: eks.amazonaws.com/role-arn)"
+  value       = aws_iam_role.jenkins_ecr.arn
 }
 
-output "jenkins_agent_role_name" {
-  description = "Name of Jenkins agent IAM role"
-  value       = aws_iam_role.jenkins_agent.name
+output "jenkins_ecr_role_name" {
+  description = "Name of Jenkins IAM role"
+  value       = aws_iam_role.jenkins_ecr.name
 }
 
 output "argocd_role_arn" {
