@@ -2,7 +2,7 @@
 
 set -e
 
-BUCKET_NAME="foundation-terraform-s3-remote-state"
+BUCKET_NAME="prod-terraform-s3-remote-state"
 REGION="eu-central-1"
 KEY_ALIAS="alias/$BUCKET_NAME-key"
 

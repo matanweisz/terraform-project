@@ -1,34 +1,3 @@
-# Global Variables
-variable "project_name" {
-  description = "Name of the project (used for resource naming)"
-  type        = string
-  default     = "weather-app"
-}
-
-variable "environment" {
-  description = "Environment name (prod, dev, staging)"
-  type        = string
-  default     = "prod"
-
-  validation {
-    condition     = contains(["prod", "dev", "staging"], var.environment)
-    error_message = "Environment must be one of: prod, dev, staging"
-  }
-}
-
-variable "aws_region" {
-  description = "AWS region where resources will be created"
-  type        = string
-  default     = "eu-central-1"
-}
-
-variable "aws_profile" {
-  description = "AWS CLI profile to use for authentication"
-  type        = string
-  default     = "default"
-}
-
-# EKS Cluster Variables
 variable "cluster_name" {
   description = "Name of the EKS cluster"
   type        = string
@@ -38,6 +7,16 @@ variable "kubernetes_version" {
   description = "Kubernetes version for the EKS cluster"
   type        = string
   default     = "1.34"
+}
+
+variable "vpc_id" {
+  description = "ID of the VPC where cluster will be created"
+  type        = string
+}
+
+variable "private_subnet_ids" {
+  description = "List of private subnet IDs for EKS nodes and control plane"
+  type        = list(string)
 }
 
 variable "ami_type" {
@@ -78,4 +57,10 @@ variable "desired_size" {
   description = "Desired number of EKS nodes"
   type        = number
   default     = 1
+}
+
+variable "tags" {
+  description = "Additional tags to apply to all resources"
+  type        = map(string)
+  default     = {}
 }

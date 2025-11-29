@@ -176,9 +176,26 @@ resource "aws_iam_policy" "argocd_secrets" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "argocd" {
+resource "aws_iam_role_policy_attachment" "argocd_secrets" {
   role       = aws_iam_role.argocd.name
   policy_arn = aws_iam_policy.argocd_secrets.arn
+}
+
+# ArgoCD EKS Access Policy (for cross-cluster management)
+resource "aws_iam_policy" "argocd_eks_access" {
+  name        = "${var.project_name}-argocd-eks-access-policy"
+  description = "Allows ArgoCD to describe EKS clusters and manage cross-cluster deployments"
+  policy      = file("${path.module}/policies/argocd-eks-access.json")
+
+  tags = {
+    Name      = "${var.project_name}-argocd-eks-access-policy"
+    ManagedBy = "terraform"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "argocd_eks_access" {
+  role       = aws_iam_role.argocd.name
+  policy_arn = aws_iam_policy.argocd_eks_access.arn
 }
 
 
