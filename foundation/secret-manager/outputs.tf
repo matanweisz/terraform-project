@@ -37,6 +37,11 @@ output "manual_injection_commands" {
       --secret-id /internal-cluster/grafana/admin-password \
       --secret-string "$(openssl rand -base64 24)"
 
+    # 4. Inject n8n admin password
+    aws secretsmanager put-secret-value \
+      --secret-id /internal-cluster/n8n/admin-password \
+      --secret-string "$(openssl rand -base64 24)"
+
     # ========================================
     # Verify Secrets Created
     # ========================================

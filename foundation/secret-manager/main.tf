@@ -17,6 +17,10 @@ locals {
       description = "Grafana admin user password"
       application = "grafana"
     }
+    "/internal-cluster/n8n/admin-password" = {
+      description = "n8n admin user password for basic authentication"
+      application = "n8n"
+    }
   }
 }
 
@@ -26,7 +30,7 @@ resource "aws_secretsmanager_secret" "secrets" {
   name        = each.key
   description = each.value.description
 
-  recovery_window_in_days = 7 # Allows recovery if accidentally deleted
+  recovery_window_in_days = 0 # Immediate deletion (allows immediate recreation)
 
   tags = {
     Name        = each.key
