@@ -9,6 +9,8 @@ server:
     ingressClassName: alb
     annotations:
       # AWS Load Balancer Controller annotations
+      # IMPORTANT: Group all internal cluster apps on single ALB to save costs
+      alb.ingress.kubernetes.io/group.name: internal-cluster-apps
       alb.ingress.kubernetes.io/scheme: internet-facing
       alb.ingress.kubernetes.io/target-type: ip
       # SSL/TLS Configuration
@@ -21,20 +23,15 @@ server:
       alb.ingress.kubernetes.io/healthcheck-port: "8080"
       # Backend protocol (HTTP since ArgoCD server runs with --insecure)
       alb.ingress.kubernetes.io/backend-protocol: HTTP
-    hosts:
-      - argocd.matanweisz.xyz
-    paths:
-      - /
+    hostname: argocd.matanweisz.xyz
+    path: /
     pathType: Prefix
-    tls:
-      - secretName: argocd-server-tls
-        hosts:
-          - argocd.matanweisz.xyz
+    tls: true
 
   extraArgs:
     - --insecure # Required because ALB communicates on HTTP
 
-  replicas: 2 # High availability for ArgoCD
+  replicas: 1 # Change for high availability
 
   resources:
     requests:
