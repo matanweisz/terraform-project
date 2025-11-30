@@ -7,6 +7,7 @@ environment  = "prod"
 # EKS Cluster Configuration
 cluster_name       = "prod-cluster"
 kubernetes_version = "1.34"
+create_cloudwatch_log_group = false
 
 # EKS Node Group Configuration
 ami_type       = "AL2023_x86_64_STANDARD"

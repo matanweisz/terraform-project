@@ -36,6 +36,7 @@ module "eks_cluster" {
   min_size       = var.min_size
   max_size       = var.max_size
   desired_size   = var.desired_size
+  create_cloudwatch_log_group = var.create_cloudwatch_log_group
 }
 
 # IAM Roles for Service Accounts (IRSA)

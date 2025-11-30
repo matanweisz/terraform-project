@@ -47,3 +47,9 @@ variable "desired_size" {
   default     = 2
 }
 
+variable "create_cloudwatch_log_group" {
+  description = "Whether to create a CloudWatch log group for the EKS cluster"
+  type        = bool
+  default     = false
+}
+

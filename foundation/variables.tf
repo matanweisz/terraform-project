@@ -122,3 +122,9 @@ variable "ecr_max_image_count" {
   type        = number
   default     = 30
 }
+
+variable "eks_create_cloudwatch_log_group" {
+  description = "Whether to create a CloudWatch log group for the EKS cluster"
+  type        = bool
+  default     = false
+}

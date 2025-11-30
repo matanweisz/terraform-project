@@ -40,6 +40,12 @@ variable "kubernetes_version" {
   default     = "1.34"
 }
 
+variable "create_cloudwatch_log_group" {
+  description = "Controls if a CloudWatch log group is created for the cluster"
+  type        = bool
+  default     = false
+}
+
 variable "ami_type" {
   description = "AMI type for EKS nodes (must match instance architecture)"
   type        = string

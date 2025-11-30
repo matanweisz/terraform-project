@@ -39,15 +39,16 @@ module "vpc" {
 module "eks" {
   source = "./eks"
 
-  cluster_name       = var.cluster_name
-  kubernetes_version = var.kubernetes_version
-  vpc_id             = module.vpc.vpc_id
-  private_subnet_ids = module.vpc.private_subnet_ids
-  ami_type           = var.ami_type
-  instance_types     = var.instance_types
-  min_size           = var.min_size
-  max_size           = var.max_size
-  desired_size       = var.desired_size
+  cluster_name                = var.cluster_name
+  kubernetes_version          = var.kubernetes_version
+  vpc_id                      = module.vpc.vpc_id
+  private_subnet_ids          = module.vpc.private_subnet_ids
+  ami_type                    = var.ami_type
+  instance_types              = var.instance_types
+  min_size                    = var.min_size
+  max_size                    = var.max_size
+  desired_size                = var.desired_size
+  create_cloudwatch_log_group = var.eks_create_cloudwatch_log_group
 }
 
 # IAM Module (IRSA Roles)

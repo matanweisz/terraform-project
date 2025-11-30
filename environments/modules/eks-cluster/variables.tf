@@ -64,3 +64,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "create_cloudwatch_log_group" {
+  description = "Controls if a CloudWatch log group is created for the cluster"
+  type        = bool
+  default     = false
+}
