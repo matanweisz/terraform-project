@@ -43,6 +43,11 @@ output "internal_cluster_security_group_id" {
   value       = module.eks.cluster_security_group_id
 }
 
+output "internal_cluster_node_security_group_id" {
+  description = "Security group ID attached to the EKS nodes (where pods run)"
+  value       = module.eks.node_security_group_id
+}
+
 output "internal_cluster_oidc_provider_arn" {
   description = "OIDC provider ARN for IRSA (IAM Roles for Service Accounts)"
   value       = module.eks.oidc_provider_arn

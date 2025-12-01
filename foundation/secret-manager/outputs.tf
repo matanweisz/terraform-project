@@ -18,8 +18,6 @@ output "manual_injection_commands" {
     # ========================================
     # Manual Secret Injection Commands
     # ========================================
-    # IMPORTANT: Run these commands to inject actual secret values into AWS Secrets Manager
-    # Secrets are NOT stored in Terraform state (security best practice)
 
     # 1. Inject Jenkins admin password
     aws secretsmanager put-secret-value \
@@ -42,16 +40,12 @@ output "manual_injection_commands" {
       --secret-id /internal-cluster/n8n/admin-password \
       --secret-string "$(openssl rand -base64 24)"
 
-    # ========================================
     # Verify Secrets Created
-    # ========================================
     aws secretsmanager list-secrets \
       --query 'SecretList[?starts_with(Name, `/internal-cluster`)].{Name:Name, ARN:ARN}' \
       --output table
 
-    # ========================================
     # Test Secret Retrieval
-    # ========================================
     aws secretsmanager get-secret-value \
       --secret-id /internal-cluster/jenkins/admin-password \
       --query SecretString \

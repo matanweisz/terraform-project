@@ -18,9 +18,10 @@ locals {
   public_subnet_ids  = data.terraform_remote_state.foundation.outputs.public_subnet_ids
 
   # Internal cluster details for cross-cluster communication
-  internal_cluster_endpoint          = data.terraform_remote_state.foundation.outputs.internal_cluster_endpoint
-  internal_cluster_security_group_id = data.terraform_remote_state.foundation.outputs.internal_cluster_security_group_id
-  internal_cluster_oidc_provider_arn = data.terraform_remote_state.foundation.outputs.internal_cluster_oidc_provider_arn
+  internal_cluster_endpoint               = data.terraform_remote_state.foundation.outputs.internal_cluster_endpoint
+  internal_cluster_security_group_id      = data.terraform_remote_state.foundation.outputs.internal_cluster_security_group_id
+  internal_cluster_node_security_group_id = data.terraform_remote_state.foundation.outputs.internal_cluster_node_security_group_id
+  internal_cluster_oidc_provider_arn      = data.terraform_remote_state.foundation.outputs.internal_cluster_oidc_provider_arn
 
   # ECR repository from foundation
   ecr_repository_url = data.terraform_remote_state.foundation.outputs.ecr_repository_url

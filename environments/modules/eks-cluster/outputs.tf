@@ -20,8 +20,13 @@ output "cluster_certificate_authority_data" {
 }
 
 output "cluster_security_group_id" {
-  description = "Security group ID attached to the EKS cluster"
+  description = "Security group ID attached to the EKS cluster (Terraform-managed)"
   value       = module.eks.cluster_security_group_id
+}
+
+output "cluster_primary_security_group_id" {
+  description = "EKS-managed security group that controls access to the Kubernetes API endpoint"
+  value       = module.eks.cluster_primary_security_group_id
 }
 
 output "node_security_group_id" {

@@ -54,8 +54,10 @@ module "irsa_roles" {
 module "cluster_access" {
   source = "../modules/cluster-access"
 
-  environment                      = var.environment
-  source_cluster_security_group_id = local.internal_cluster_security_group_id
-  target_cluster_security_group_id = module.eks_cluster.cluster_security_group_id
-  target_node_security_group_id    = module.eks_cluster.node_security_group_id
+  environment                            = var.environment
+  source_cluster_security_group_id       = local.internal_cluster_security_group_id
+  source_node_security_group_id          = local.internal_cluster_node_security_group_id
+  target_cluster_security_group_id       = module.eks_cluster.cluster_security_group_id
+  target_cluster_primary_security_group_id = module.eks_cluster.cluster_primary_security_group_id
+  target_node_security_group_id          = module.eks_cluster.node_security_group_id
 }
