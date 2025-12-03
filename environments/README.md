@@ -1,361 +1,225 @@
-# Environments Layer - Production Terraform Configuration
+# Environment Orchestrator
 
-This directory contains the **environments layer** of the two-layer Terraform architecture. It manages environment-specific EKS clusters (prod, dev, staging) that run application workloads.
+This directory contains the orchestrator that manages all environments (dev, staging, production) from a single Terraform configuration.
 
-## Architecture Overview
-
-### Two-Layer Terraform Strategy
+## Architecture
 
 ```
-Layer 1: Foundation (manual)       Layer 2: Environments (automated)
-├── VPC                            ├── prod-cluster (EKS)
-├── internal-cluster (EKS)         ├── dev-cluster (EKS) - future
-├── IAM roles (foundation)         ├── staging-cluster (EKS) - future
-├── ECR repository                 ├── IAM roles (environment-specific)
-└── Secrets Manager                └── Security group rules
+terraform/environments/
+├── main.tf                    # Orchestrator - provisions environments based on toggles
+├── variables.tf               # Configuration for all environments
+├── outputs.tf                 # Outputs from provisioned environments
+├── locals.tf                  # Local values and helpers
+├── terraform.tfvars.example   # Example configuration
+├── dev/                       # Dev environment module
+├── stg/                       # Staging environment module
+├── prod/                      # Production environment module
+└── modules/                   # Shared Terraform modules
+    ├── cluster-access/
+    ├── eks-cluster/
+    └── irsa-roles/
 ```
 
-**Key principle**: Foundation provides networking and shared resources. Environments consume those resources via remote state and create their own clusters.
+## Quick Start
 
-## Directory Structure
+### 1. Create Backend Bucket
 
-```
-environments/
-├── modules/                  # Reusable modules for all environments
-│   ├── eks-cluster/         # EKS cluster wrapper module
-│   │   ├── main.tf          # Wraps terraform-aws-modules/eks
-│   │   ├── variables.tf
-│   │   └── outputs.tf
-│   ├── irsa-roles/          # IAM Roles for Service Accounts
-│   │   ├── main.tf          # ALB controller, External Secrets
-│   │   ├── variables.tf
-│   │   ├── outputs.tf
-│   │   └── policies/        # IAM policy JSON files
-│   │       └── alb-controller.json
-│   └── cluster-access/      # Cross-cluster security group rules
-│       ├── main.tf          # Allow internal-cluster → env-cluster
-│       ├── variables.tf
-│       └── outputs.tf
-├── prod/                    # Production environment
-│   ├── backend.tf           # S3 backend configuration
-│   ├── data.tf              # Remote state data source (foundation)
-│   ├── main.tf              # Main environment configuration
-│   ├── variables.tf         # Environment variables
-│   ├── terraform.tfvars     # Production values
-│   └── outputs.tf           # Environment outputs
-└── README.md                # This file
-```
-
-## Module Descriptions
-
-### 1. `modules/eks-cluster`
-
-Reusable EKS cluster module that wraps the official `terraform-aws-modules/eks` module with sensible defaults.
-
-**Features**:
-- EKS cluster with managed node groups
-- Core addons (CoreDNS, kube-proxy, VPC-CNI, Pod Identity Agent)
-- IRSA (IAM Roles for Service Accounts) enabled
-- Public endpoint for ALB access
-
-**Usage**:
-```hcl
-module "eks_cluster" {
-  source = "../modules/eks-cluster"
-
-  cluster_name       = "prod-cluster"
-  kubernetes_version = "1.34"
-  vpc_id             = local.vpc_id
-  private_subnet_ids = local.private_subnet_ids
-  ami_type           = "AL2023_x86_64_STANDARD"
-  instance_types     = ["t3.medium"]
-  min_size           = 1
-  max_size           = 2
-  desired_size       = 1
-}
-```
-
-### 2. `modules/irsa-roles`
-
-Creates IAM roles for Kubernetes service accounts to access AWS services.
-
-**Roles created**:
-- **ALB Controller**: Manages Application Load Balancers for Ingress
-
-**Note**: External Secrets Operator is NOT deployed in production environments to maintain a minimal security surface. Application secrets should be baked into container images or managed via ArgoCD.
-
-**Usage**:
-```hcl
-module "irsa_roles" {
-  source = "../modules/irsa-roles"
-
-  environment       = "prod"
-  project_name      = "weather-app"
-  aws_region        = "eu-central-1"
-  oidc_provider_arn = module.eks_cluster.oidc_provider_arn
-  oidc_provider     = module.eks_cluster.oidc_provider
-}
-```
-
-**Output**: IAM role ARNs to annotate Kubernetes ServiceAccounts:
-```yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: aws-load-balancer-controller
-  namespace: kube-system
-  annotations:
-    eks.amazonaws.com/role-arn: <alb_controller_role_arn>
-```
-
-### 3. `modules/cluster-access`
-
-Configures security group rules to allow cross-cluster communication from the internal cluster to environment clusters.
-
-**Purpose**: Enables ArgoCD running in `internal-cluster` to manage applications in `prod-cluster`.
-
-**Security rules created**:
-- Allow internal cluster → prod cluster API (port 443)
-- Allow internal cluster → prod cluster nodes (all TCP)
-- Allow response traffic back to internal cluster
-
-**Usage**:
-```hcl
-module "cluster_access" {
-  source = "../modules/cluster-access"
-
-  environment                      = "prod"
-  source_cluster_security_group_id = local.internal_cluster_security_group_id
-  target_cluster_security_group_id = module.eks_cluster.cluster_security_group_id
-  target_node_security_group_id    = module.eks_cluster.node_security_group_id
-}
-```
-
-## Production Environment (`prod/`)
-
-### Remote State Integration
-
-The `data.tf` file reads outputs from the foundation layer:
-
-```hcl
-data "terraform_remote_state" "foundation" {
-  backend = "s3"
-  config = {
-    bucket = "foundation-terraform-s3-remote-state"
-    key    = "terraform.tfstate"
-    region = "eu-central-1"
-  }
-}
-
-locals {
-  vpc_id                             = data.terraform_remote_state.foundation.outputs.vpc_id
-  private_subnet_ids                 = data.terraform_remote_state.foundation.outputs.private_subnet_ids
-  internal_cluster_security_group_id = data.terraform_remote_state.foundation.outputs.internal_cluster_security_group_id
-  # ... more outputs
-}
-```
-
-**Why this matters**: No hardcoded VPC IDs. Changes to foundation automatically propagate to environments.
-
-### Configuration Files
-
-#### `backend.tf`
-Separate S3 backend for environment state isolation:
-```hcl
-terraform {
-  backend "s3" {
-    bucket       = "prod-terraform-s3-remote-state"
-    key          = "terraform.tfstate"
-    region       = "eu-central-1"
-    use_lockfile = true
-    encrypt      = true
-  }
-}
-```
-
-#### `terraform.tfvars`
-Production-specific values:
-```hcl
-environment        = "prod"
-cluster_name       = "prod-cluster"
-kubernetes_version = "1.34"
-ami_type           = "AL2023_x86_64_STANDARD"
-instance_types     = ["t3.medium"]
-min_size           = 1
-max_size           = 2
-desired_size       = 1
-```
-
-## Usage Instructions
-
-### Prerequisites
-
-1. Foundation layer must be applied and working
-2. S3 bucket for prod backend must exist: `prod-terraform-s3-remote-state`
-3. AWS credentials configured with profile: `full-project-user`
-
-### Deploying Production Environment
+First, ensure the backend S3 bucket exists:
 
 ```bash
-cd terraform/environments/prod
-
-# Initialize Terraform (first time only)
+cd ../backend
 terraform init
-
-# Review planned changes
-terraform plan
-
-# Apply configuration
 terraform apply
-
-# View outputs
-terraform output
 ```
 
-### Accessing the Cluster
+This creates the `environments-terraform-s3-remote-state` bucket.
+
+### 2. Configure Environments
+
+Copy the example configuration:
 
 ```bash
-# Configure kubectl
-aws eks update-kubeconfig \
-  --region eu-central-1 \
-  --name prod-cluster \
-  --profile full-project-user
-
-# Verify access
-kubectl get nodes
-kubectl get namespaces
+cp terraform.tfvars.example terraform.tfvars
 ```
 
-### Deploying ALB Ingress Controller
+Edit `terraform.tfvars` to enable/disable environments:
 
-After cluster creation, deploy the ALB controller with the IRSA role:
+```hcl
+# Toggle environments
+provision_dev  = true
+provision_stg  = true
+provision_prod = false
 
-```bash
-# Get the role ARN
-ROLE_ARN=$(terraform output -raw alb_controller_role_arn)
+# Configure each environment
+dev_cluster_name = "dev-eks-cluster"
+dev_min_size     = 1
+dev_max_size     = 2
+dev_desired_size = 1
 
-# Install ALB controller via Helm
-helm repo add eks https://aws.github.io/eks-charts
-helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
-  -n kube-system \
-  --set clusterName=prod-cluster \
-  --set serviceAccount.create=true \
-  --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=$ROLE_ARN
+stg_cluster_name = "stg-eks-cluster"
+stg_min_size     = 1
+stg_max_size     = 3
+stg_desired_size = 2
+
+prod_cluster_name = "prod-eks-cluster"
+prod_min_size     = 2
+prod_max_size     = 5
+prod_desired_size = 3
 ```
 
-## Adding New Environments (dev/staging)
-
-To add a new environment, copy the `prod/` directory structure:
+### 3. Deploy Environments
 
 ```bash
-# Create new environment
-cp -r prod/ dev/
-
-# Update the following files:
-# - backend.tf: Change bucket to "dev-terraform-s3-remote-state"
-# - terraform.tfvars: Change cluster_name to "dev-cluster", environment to "dev"
-
-# Initialize and apply
-cd dev/
 terraform init
 terraform plan
 terraform apply
 ```
 
-## Cost Optimization
+Terraform will only provision environments where `provision_<env> = true`.
 
-**Production cluster cost**: ~$150/month
-- EKS control plane: ~$73/month
-- t3.medium nodes (1-2): ~$60-120/month
+## How It Works
 
-**To destroy when not in use**:
-```bash
-cd terraform/environments/prod
-terraform destroy
+### Single State File
+
+All environments are managed in a single state file stored in `environments-terraform-s3-remote-state`. This simplifies management and allows you to see all environments at once.
+
+### Conditional Provisioning
+
+Each environment module uses `count` to conditionally create resources:
+
+```hcl
+module "dev" {
+  count  = var.provision_dev ? 1 : 0
+  source = "./dev"
+  # ... configuration
+}
 ```
 
-**Note**: Destroying prod cluster does NOT affect foundation layer (VPC, internal-cluster, ECR).
+When `provision_dev = false`, the module is not created. When `true`, it's instantiated.
 
-## Validation and Testing
+### Toggle Workflow
 
-### Validate Configuration
+1. Edit `terraform.tfvars` to change `provision_<env>` flags
+2. Run `terraform plan` to see what will change
+3. Run `terraform apply` to apply changes
 
-```bash
-terraform validate
-terraform fmt -recursive
-```
+**Enabling an environment**: Set `provision_<env> = true` and apply
+**Disabling an environment**: Set `provision_<env> = false` and apply (destroys the environment!)
 
-### Test Cross-Cluster Access
+## Variables
 
-```bash
-# From internal cluster, test prod cluster access
-kubectl config use-context internal-cluster
-kubectl --context prod-cluster get nodes
+All variables are defined in `variables.tf`. Key variables:
 
-# Should work if security groups are correctly configured
-```
+### Global Settings
+- `project_name`: Project name (default: "weather-app")
+- `aws_region`: AWS region (default: "eu-central-1")
+- `aws_profile`: AWS CLI profile (default: "default")
 
-### Verify IAM Roles
+### Environment Toggles
+- `provision_dev`: Enable/disable dev environment (default: false)
+- `provision_stg`: Enable/disable staging environment (default: false)
+- `provision_prod`: Enable/disable production environment (default: false)
 
-```bash
-# Check role trust policy
-aws iam get-role --role-name prod-weather-app-alb-controller
+### Per-Environment Settings
+Each environment has its own set of variables:
+- `<env>_cluster_name`: EKS cluster name
+- `<env>_kubernetes_version`: Kubernetes version
+- `<env>_instance_types`: Node instance types
+- `<env>_min_size`: Minimum nodes
+- `<env>_max_size`: Maximum nodes
+- `<env>_desired_size`: Desired nodes
+- `<env>_create_cloudwatch_log_group`: CloudWatch logging
 
-# Verify OIDC provider
-aws iam list-open-id-connect-providers
-```
+## Outputs
+
+Run `terraform output` to see:
+- `provisioned_environments`: List of active environments
+- `dev_cluster_endpoint`: Dev cluster endpoint (if provisioned)
+- `dev_cluster_name`: Dev cluster name (if provisioned)
+- `stg_cluster_endpoint`: Staging cluster endpoint (if provisioned)
+- `stg_cluster_name`: Staging cluster name (if provisioned)
+- `prod_cluster_endpoint`: Production cluster endpoint (if provisioned)
+- `prod_cluster_name`: Production cluster name (if provisioned)
 
 ## Best Practices
 
-### 1. Never Hardcode Values
-- Use `data.tf` to retrieve foundation outputs
-- Use variables for environment-specific values
+### 1. Test Changes in Dev First
+Always test infrastructure changes in dev before applying to staging or production.
 
-### 2. Module Reusability
-- Create modules for patterns used across environments
-- Keep modules simple and single-purpose
+### 2. Review Plans Carefully
+Always review `terraform plan` output before applying, especially when disabling environments.
 
-### 3. State Isolation
-- Each environment has its own S3 backend
-- Foundation and environments have separate state files
+### 3. Use Version Control
+Commit `terraform.tfvars` to version control to track which environments should be provisioned.
 
-### 4. Security
-- Security groups configured via modules
-- IAM roles follow least-privilege principle
-- Secrets stored in AWS Secrets Manager (not Terraform state)
+## Common Operations
 
-### 5. Documentation
-- Update README when adding new modules
-- Document architectural decisions
-- Include usage examples
+### Enable a New Environment
+
+```hcl
+# In terraform.tfvars
+provision_dev = true
+```
+
+```bash
+terraform apply
+```
+
+### Disable an Environment
+
+**Warning**: This destroys all resources in that environment!
+
+```hcl
+# In terraform.tfvars
+provision_dev = false
+```
+
+```bash
+terraform plan  # Verify what will be destroyed
+terraform apply
+```
+
+### Update Environment Configuration
+
+```hcl
+# In terraform.tfvars
+dev_min_size     = 2  # Changed from 1
+dev_max_size     = 4  # Changed from 2
+dev_desired_size = 2  # Changed from 1
+```
+
+```bash
+terraform apply
+```
 
 ## Troubleshooting
 
-### Error: "No module call named 'vpc'"
-**Cause**: Missing `data.tf` or incorrect remote state configuration.
-**Fix**: Ensure `data.tf` exists and foundation backend is correct.
+### "Backend bucket does not exist"
+Run `cd ../backend && terraform apply` to create the backend bucket.
 
-### Error: "Error creating Security Group Rule"
-**Cause**: Source security group doesn't exist.
-**Fix**: Verify foundation layer outputs include `internal_cluster_security_group_id`.
+### "Error acquiring state lock"
+Another Terraform process is running. Wait for it to complete.
 
-### Error: "InvalidParameterException: Cluster does not exist"
-**Cause**: Cluster name mismatch.
-**Fix**: Ensure `cluster_name` in terraform.tfvars matches the actual cluster name.
+### "Module not found"
+Run `terraform init` to download modules.
+
+## Directory Structure
+
+Each environment directory (dev/, stg/, prod/) contains:
+- `main.tf` - Provider config and module calls
+- `variables.tf` - Environment-specific variables
+- `data.tf` - Remote state data sources (reads foundation outputs)
+- `outputs.tf` - Environment outputs
+
+Shared modules are in the `modules/` directory:
+- `cluster-access/` - Cross-cluster security group rules
+- `eks-cluster/` - EKS cluster configuration
+- `irsa-roles/` - IAM Roles for Service Accounts
 
 ## Next Steps
 
-After deploying the production environment:
-
-1. **Deploy ALB Ingress Controller** (see instructions above)
-2. **Deploy External Secrets Operator** for secrets management
-3. **Configure ArgoCD** in internal cluster to manage prod applications
-4. **Deploy weather-app** via ArgoCD GitOps workflow
-5. **Set up monitoring** with Prometheus and Grafana
-
-## References
-
-- [Terraform AWS EKS Module](https://registry.terraform.io/modules/terraform-aws-modules/eks/aws)
-- [AWS Load Balancer Controller](https://kubernetes-sigs.github.io/aws-load-balancer-controller/)
-- [IRSA Documentation](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html)
-- [Two-Layer Terraform Strategy](../../docs/TERRAFORM_LAYERING_STRATEGY.md)
+After provisioning environments:
+1. Configure kubectl access to each cluster
+2. Deploy applications via ArgoCD
+3. Set up monitoring and observability
+4. Configure CI/CD pipelines

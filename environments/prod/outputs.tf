@@ -51,6 +51,22 @@ output "alb_controller_role_arn" {
   value       = module.irsa_roles.alb_controller_role_arn
 }
 
+# ECR Outputs
+output "ecr_repository_url" {
+  description = "URL of the ECR repository (use this in Jenkins pipeline)"
+  value       = module.ecr.repository_url
+}
+
+output "ecr_repository_arn" {
+  description = "ARN of the ECR repository"
+  value       = module.ecr.repository_arn
+}
+
+output "ecr_repository_name" {
+  description = "Name of the ECR repository"
+  value       = module.ecr.repository_name
+}
+
 # Cluster Access Outputs
 output "cluster_access_configured" {
   description = "Indicates that cross-cluster access from internal cluster is configured"

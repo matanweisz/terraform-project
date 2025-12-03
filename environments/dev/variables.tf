@@ -8,7 +8,7 @@ variable "project_name" {
 variable "environment" {
   description = "Environment name (prod, dev, staging)"
   type        = string
-  default     = "prod"
+  default     = "dev"
 
   validation {
     condition     = contains(["prod", "dev", "staging"], var.environment)
@@ -102,5 +102,5 @@ variable "ecr_scan_on_push" {
 variable "ecr_max_image_count" {
   description = "Maximum number of images to keep in ECR repository"
   type        = number
-  default     = 50
+  default     = 30
 }

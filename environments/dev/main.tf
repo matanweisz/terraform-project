@@ -1,4 +1,4 @@
-# Production EKS Cluster
+# Development EKS Cluster
 module "eks_cluster" {
   source = "../modules/eks-cluster"
 
@@ -15,7 +15,7 @@ module "eks_cluster" {
   create_cloudwatch_log_group = var.create_cloudwatch_log_group
 }
 
-# ECR Repository for Production Environment
+# ECR Repository for Dev Environment
 module "ecr" {
   source = "../modules/ecr"
 
