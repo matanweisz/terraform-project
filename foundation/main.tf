@@ -80,15 +80,10 @@ module "secret_manager" {
   cluster_name = var.cluster_name
 }
 
-# AWS SES domain
-resource "aws_ses_domain_identity" "domain" {
-  domain = "matanweisz.xyz"
-}
+# SES Module (Email notifications)
+module "ses" {
+  source = "./ses"
 
-resource "aws_route53_record" "example_amazonses_verification_record" {
-  zone_id = "Z05390121UUOTTC1Z62MR"
-  name    = "_amazonses.matanweisz.xyz"
-  type    = "TXT"
-  ttl     = "600"
-  records = [aws_ses_domain_identity.domain.verification_token]
+  domain     = var.ses_domain
+  aws_region = var.aws_region
 }

@@ -128,3 +128,10 @@ variable "eks_create_cloudwatch_log_group" {
   type        = bool
   default     = false
 }
+
+# SES Variables
+variable "ses_domain" {
+  description = "Domain name for SES email notifications"
+  type        = string
+  default     = "matanweisz.xyz"
+}
