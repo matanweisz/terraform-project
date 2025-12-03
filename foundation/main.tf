@@ -69,10 +69,10 @@ module "secret_manager" {
   cluster_name = var.cluster_name
 }
 
-# SES Module (Email notifications)
-module "ses" {
-  source = "./ses"
-
-  domain     = var.ses_domain
-  aws_region = var.aws_region
-}
+# # SES Module (Email notifications)
+# module "ses" {
+#   source = "./ses"
+#
+#   domain     = var.ses_domain
+#   aws_region = var.aws_region
+# }

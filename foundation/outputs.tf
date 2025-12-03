@@ -91,31 +91,31 @@ output "manual_injection_commands" {
   sensitive   = false # Not sensitive - these are just placeholder commands
 }
 
-# SES Outputs
-output "route53_zone_id" {
-  description = "Route53 hosted zone ID for the domain"
-  value       = module.ses.route53_zone_id
-}
-
-output "route53_name_servers" {
-  description = "Route53 name servers - update these in your domain registrar"
-  value       = module.ses.route53_name_servers
-}
-
-output "ses_domain_identity_arn" {
-  description = "SES domain identity ARN"
-  value       = module.ses.ses_domain_identity_arn
-}
-
-output "ses_notifications_email" {
-  description = "Verified email address for ArgoCD notifications"
-  value       = module.ses.notifications_email
-}
-
-output "ses_smtp_endpoint" {
-  description = "SES SMTP endpoint for sending emails"
-  value       = module.ses.smtp_endpoint
-}
+# # SES Outputs
+# output "route53_zone_id" {
+#   description = "Route53 hosted zone ID for the domain"
+#   value       = module.ses.route53_zone_id
+# }
+#
+# output "route53_name_servers" {
+#   description = "Route53 name servers - update these in your domain registrar"
+#   value       = module.ses.route53_name_servers
+# }
+#
+# output "ses_domain_identity_arn" {
+#   description = "SES domain identity ARN"
+#   value       = module.ses.ses_domain_identity_arn
+# }
+#
+# output "ses_notifications_email" {
+#   description = "Verified email address for ArgoCD notifications"
+#   value       = module.ses.notifications_email
+# }
+#
+# output "ses_smtp_endpoint" {
+#   description = "SES SMTP endpoint for sending emails"
+#   value       = module.ses.smtp_endpoint
+# }
 
 # Summary Output of all created resources
 output "foundation_summary" {
@@ -125,7 +125,5 @@ output "foundation_summary" {
     cluster_name              = module.eks.cluster_id
     cluster_endpoint          = module.eks.cluster_endpoint
     external_secrets_role_arn = module.iam.external_secrets_role_arn
-    ses_notifications_email   = module.ses.notifications_email
-    route53_name_servers      = module.ses.route53_name_servers
   }
 }
