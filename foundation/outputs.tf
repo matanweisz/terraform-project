@@ -60,12 +60,12 @@ output "alb_controller_role_arn" {
 }
 
 output "jenkins_ecr_role_arn" {
-  description = "ARN of Jenkins IAM role for ECR push (annotate ServiceAccount with this)"
+  description = "ARN of Jenkins IAM role for ECR push to all environments (annotate Jenkins ServiceAccount with this)"
   value       = module.iam.jenkins_ecr_role_arn
 }
 
 output "argocd_role_arn" {
-  description = "ARN of ArgoCD IAM role for Secrets Manager access (annotate ServiceAccount with this)"
+  description = "ARN of ArgoCD IAM role for Secrets Manager and ECR access (annotate ServiceAccount with this)"
   value       = module.iam.argocd_role_arn
 }
 
@@ -77,22 +77,6 @@ output "external_secrets_role_arn" {
 output "ebs_csi_driver_role_arn" {
   description = "ARN of EBS CSI Driver IAM role (annotate ServiceAccount with this)"
   value       = module.iam.ebs_csi_driver_role_arn
-}
-
-# ECR Outputs
-output "ecr_repository_url" {
-  description = "ECR repository URL for weather-app container images (use in Jenkins pipeline)"
-  value       = module.ecr.repository_url
-}
-
-output "ecr_repository_arn" {
-  description = "ECR repository ARN"
-  value       = module.ecr.repository_arn
-}
-
-output "ecr_repository_name" {
-  description = "ECR repository name"
-  value       = module.ecr.repository_name
 }
 
 # Secrets Manager Outputs
@@ -140,7 +124,6 @@ output "foundation_summary" {
     vpc_id                    = module.vpc.vpc_id
     cluster_name              = module.eks.cluster_id
     cluster_endpoint          = module.eks.cluster_endpoint
-    ecr_repository            = module.ecr.repository_url
     external_secrets_role_arn = module.iam.external_secrets_role_arn
     ses_notifications_email   = module.ses.notifications_email
     route53_name_servers      = module.ses.route53_name_servers

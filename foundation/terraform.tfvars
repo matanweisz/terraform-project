@@ -21,9 +21,3 @@ instance_types = ["t3.medium"]
 min_size       = 2
 max_size       = 4
 desired_size   = 3
-
-# ECR Configuration
-ecr_repository_name      = "weather-app"
-ecr_image_tag_mutability = "MUTABLE"
-ecr_scan_on_push         = true
-ecr_max_image_count      = 10

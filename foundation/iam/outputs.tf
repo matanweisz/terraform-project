@@ -9,7 +9,7 @@ output "alb_controller_role_name" {
 }
 
 output "jenkins_ecr_role_arn" {
-  description = "ARN of Jenkins IAM role for ECR push (annotate ServiceAccount: eks.amazonaws.com/role-arn)"
+  description = "ARN of Jenkins IAM role for ECR push to all environments (annotate ServiceAccount with this)"
   value       = aws_iam_role.jenkins_ecr.arn
 }
 

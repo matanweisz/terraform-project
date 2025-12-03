@@ -98,31 +98,6 @@ variable "desired_size" {
   }
 }
 
-# ECR Variables
-variable "ecr_repository_name" {
-  description = "Name of the ECR repository for container images"
-  type        = string
-  default     = "weather-app"
-}
-
-variable "ecr_image_tag_mutability" {
-  description = "Image tag mutability setting for ECR (MUTABLE allows overwriting tags)"
-  type        = string
-  default     = "MUTABLE"
-}
-
-variable "ecr_scan_on_push" {
-  description = "Enable automatic vulnerability scanning when images are pushed"
-  type        = bool
-  default     = true
-}
-
-variable "ecr_max_image_count" {
-  description = "Maximum number of images to retain in ECR (older images auto-deleted)"
-  type        = number
-  default     = 30
-}
-
 variable "eks_create_cloudwatch_log_group" {
   description = "Whether to create a CloudWatch log group for the EKS cluster"
   type        = bool

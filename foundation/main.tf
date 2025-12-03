@@ -55,22 +55,11 @@ module "eks" {
 module "iam" {
   source = "./iam"
 
-  oidc_provider_arn  = module.eks.oidc_provider_arn
-  oidc_provider      = module.eks.oidc_provider
-  cluster_name       = var.cluster_name
-  project_name       = var.project_name
-  aws_region         = var.aws_region
-  ecr_repository_arn = module.ecr.repository_arn
-}
-
-# ECR Module
-module "ecr" {
-  source = "./ecr"
-
-  repository_name      = var.ecr_repository_name
-  image_tag_mutability = var.ecr_image_tag_mutability
-  scan_on_push         = var.ecr_scan_on_push
-  max_image_count      = var.ecr_max_image_count
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider     = module.eks.oidc_provider
+  cluster_name      = var.cluster_name
+  project_name      = var.project_name
+  aws_region        = var.aws_region
 }
 
 # Secrets Manager Module

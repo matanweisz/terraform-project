@@ -50,7 +50,7 @@ resource "aws_iam_role_policy_attachment" "alb_controller" {
 
 
 # Jenkins IAM Role (ECR Push)
-# This role is used by both the Jenkins controller and dynamic agent pods
+# This role is used by Jenkins running on the internal cluster to push images to all environment ECR repos
 data "aws_iam_policy_document" "jenkins_ecr_assume_role" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -64,7 +64,7 @@ data "aws_iam_policy_document" "jenkins_ecr_assume_role" {
       test     = "StringEquals"
       variable = "${var.oidc_provider}:sub"
       # Allow both jenkins service account and dynamically created agent pods
-      values   = [
+      values = [
         "system:serviceaccount:jenkins:jenkins",
         "system:serviceaccount:jenkins:default"
       ]
@@ -91,16 +91,18 @@ resource "aws_iam_role" "jenkins_ecr" {
 
 resource "aws_iam_policy" "jenkins_ecr" {
   name        = "${var.project_name}-jenkins-ecr-policy"
-  description = "Allows Jenkins agents to push images to ECR"
+  description = "Allows Jenkins to push images to all environment ECR repositories"
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
+        Sid      = "ECRAuthToken"
         Effect   = "Allow"
         Action   = ["ecr:GetAuthorizationToken"]
         Resource = "*"
       },
       {
+        Sid    = "ECRPushToAllEnvironments"
         Effect = "Allow"
         Action = [
           "ecr:BatchCheckLayerAvailability",
@@ -111,10 +113,20 @@ resource "aws_iam_policy" "jenkins_ecr" {
           "ecr:UploadLayerPart",
           "ecr:CompleteLayerUpload"
         ]
-        Resource = var.ecr_repository_arn
+        # Allow access to all environment ECR repos (dev, stg, prod)
+        Resource = [
+          "arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/${var.project_name}-dev",
+          "arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/${var.project_name}-staging",
+          "arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/${var.project_name}-prod"
+        ]
       }
     ]
   })
+
+  tags = {
+    Name      = "${var.project_name}-jenkins-ecr-policy"
+    ManagedBy = "terraform"
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "jenkins_ecr" {
@@ -201,6 +213,50 @@ resource "aws_iam_policy" "argocd_eks_access" {
 resource "aws_iam_role_policy_attachment" "argocd_eks_access" {
   role       = aws_iam_role.argocd.name
   policy_arn = aws_iam_policy.argocd_eks_access.arn
+}
+
+# ArgoCD ECR Access Policy (for pulling images from all environment ECR repos)
+resource "aws_iam_policy" "argocd_ecr_pull" {
+  name        = "${var.project_name}-argocd-ecr-pull-policy"
+  description = "Allows ArgoCD to pull images from all environment ECR repositories"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "ECRAuthToken"
+        Effect   = "Allow"
+        Action   = ["ecr:GetAuthorizationToken"]
+        Resource = "*"
+      },
+      {
+        Sid    = "ECRPullFromAllEnvironments"
+        Effect = "Allow"
+        Action = [
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:DescribeImages",
+          "ecr:ListImages"
+        ]
+        # Allow pull access to all environment ECR repos (dev, stg, prod)
+        Resource = [
+          "arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/${var.project_name}-dev",
+          "arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/${var.project_name}-staging",
+          "arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/${var.project_name}-prod"
+        ]
+      }
+    ]
+  })
+
+  tags = {
+    Name      = "${var.project_name}-argocd-ecr-pull-policy"
+    ManagedBy = "terraform"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "argocd_ecr_pull" {
+  role       = aws_iam_role.argocd.name
+  policy_arn = aws_iam_policy.argocd_ecr_pull.arn
 }
 
 
